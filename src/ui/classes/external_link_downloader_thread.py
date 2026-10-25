@@ -15,7 +15,7 @@ class ExternalLinkDownloadThread(QThread):
     overall_progress_signal = Signal(int, int)
     file_progress_signal = Signal(str, object)
 
-    def __init__(self, tasks_to_download, download_base_path, parent_logger_func, parent=None, use_post_subfolder=False):
+    def __init__(self, tasks_to_download, download_base_path, parent_logger_func, parent=None, use_post_subfolder=True):
         super().__init__(parent)
         self.tasks = tasks_to_download
         self.download_base_path = download_base_path
@@ -57,7 +57,7 @@ class ExternalLinkDownloadThread(QThread):
                         logger_func=self.parent_logger_func,
                         progress_callback_func=self.file_progress_signal.emit,
                         overall_progress_callback=self.overall_progress_signal.emit,
-                        use_post_subfolder=self.use_post_subfolder,
+                        use_post_subfolder=True,
                         post_title=post_title
                     )
                 elif platform == 'dropbox':
@@ -66,7 +66,7 @@ class ExternalLinkDownloadThread(QThread):
                         self.download_base_path,
                         logger_func=self.parent_logger_func,
                         progress_callback_func=self.file_progress_signal.emit,
-                        use_post_subfolder=self.use_post_subfolder,
+                        use_post_subfolder=True,
                         post_title=post_title
                     )
                 else:
