@@ -45,12 +45,21 @@ def clean_folder_name(name):
     """
     if not isinstance(name, str):
         name = str(name)
-    
-    cleaned = re.sub(r'[<>:"/\\|?*]', '', name)
-    cleaned = cleaned.strip()
-    
+    cleaned = re.sub(r'[\x00-\x1f]' , '', name)
+    cleaned = re.sub(r'[<]', '[', cleaned)
+    cleaned = re.sub(r'[>]', ']', cleaned)
+    cleaned = re.sub(r'[:]', ' · ', cleaned)
+    cleaned = re.sub(r'["]', '\'', cleaned)
+    cleaned = re.sub(r'[/]', ' - ', cleaned)
+    cleaned = re.sub(r'[\\]', ' - ', cleaned)
+    cleaned = re.sub(r'[|]', ' ~ ', cleaned)
+    cleaned = re.sub(r'[?]', '？', cleaned)
+    cleaned = re.sub(r'[*]', '＊', cleaned)
+        
+    # Replace multiple spaces with a single space
     cleaned = re.sub(r'\s+', ' ', cleaned)
-
+    cleaned = cleaned.strip(' .')
+    
     if not cleaned:
         return "untitled_folder"
 
