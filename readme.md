@@ -40,7 +40,7 @@ pip install PyQt5 requests packaging cloudscraper bs4 pycryptodome curl_cffi
 ```
 Optional dependencies (for features like PDF generation and image compression):
 ```bash
-pip install gdown pillow fpdf python-docx
+pip install gdown pillow fpdf python-docx mediafiredl
 ```
 
 ### 2. Run the App

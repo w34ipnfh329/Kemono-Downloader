@@ -66,7 +66,7 @@ class CustomFilenameDialog(QDialog):
         date_format_label = QLabel("Date Format (for {published}):")
         date_layout.addWidget(date_format_label)
         self.date_format_input = QLineEdit(self)
-        self.date_format_input.setText(self.current_date_format or "YYYY-MM-DD")
+        self.date_format_input.setText(self.current_date_format or "[YYYY-MM-DD]")
         self.date_format_input.setPlaceholderText("e.g., YYYY-MM-DD")
         date_layout.addWidget(self.date_format_input)
         formats_layout.addLayout(date_layout)

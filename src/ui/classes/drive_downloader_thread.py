@@ -5,6 +5,7 @@ from ...services.drive_downloader import (
     download_gdrive_file,
     download_gofile_folder,
     download_mega_file as drive_download_mega_file,
+    download_mediafire_file
 )
 
 
@@ -64,6 +65,15 @@ class DriveDownloadThread(QThread):
                     progress_callback_func=self.file_progress_signal.emit,
                     overall_progress_callback=self.overall_progress_signal.emit,
                     use_post_subfolder=self.use_post_subfolder
+                )
+            elif self.platform == 'mediafire':
+                download_mediafire_file(
+                    self.drive_url, self.output_dir,
+                    logger_func=self.logger_func,
+                    progress_callback_func=self.file_progress_signal.emit,
+                    overall_progress_callback=self.overall_progress_signal.emit,
+                    use_post_subfolder=self.use_post_subfolder,
+                    post_title="MediaFire Download"
                 )
 
             self.finished_signal.emit(1, 0, self.is_cancelled, [])

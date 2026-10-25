@@ -10,7 +10,7 @@ import sys
 import io
 import hashlib  
 from contextlib import redirect_stdout
-from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
+from urllib.parse import urlparse, urlunparse, parse_qs, urlencode, unquote
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Lock
 
@@ -32,6 +32,12 @@ try:
 except ImportError:
     GDRIVE_AVAILABLE = False
 
+try:
+    from mediafiredl import MediafireDL
+    MEDIAFIRE_DL_AVAILABLE = True
+except ImportError:
+    MEDIAFIRE_DL_AVAILABLE = False
+    
 MEGA_API_URL = "https://g.api.mega.co.nz"
 MIN_SIZE_FOR_MULTIPART_MEGA = 20 * 1024 * 1024
 NUM_PARTS_FOR_MEGA = 5
@@ -220,7 +226,6 @@ def download_and_decrypt_mega_file(info, download_path, logger_func,
         logger_func(f"   [Mega] ✅ Successfully downloaded '{file_name}'")
     else:
         logger_func(f"   [Mega] ❌ Incomplete download for '{file_name}'.")
-
 
 def _process_mega_folder(folder_id, folder_key, session, logger_func):
     try:
@@ -675,3 +680,59 @@ def download_gofile_folder(
 
     except Exception as e:
         logger_func(f"   [Gofile] ❌ Download failed: {e}")
+
+def _mediafire_filename(url):
+    parts = [p for p in urlparse(url).path.split('/') if p]
+    if parts and parts[-1] == 'file':
+        parts.pop()
+    if not parts:
+        return None
+    return re.sub(r'[<>:"/\\|?*]', '_', unquote(parts[-1]))
+
+def download_mediafire_file(url, download_path, logger_func=print, progress_callback_func=None, overall_progress_callback=None, use_post_subfolder=False, post_title=None):
+    if not MEDIAFIRE_DL_AVAILABLE:
+        logger_func("❌ MediaFire download failed: 'mediafire-dl' library is not installed.")
+        if overall_progress_callback: overall_progress_callback(1, 1)
+        return
+
+    final_download_path = download_path
+    if use_post_subfolder and post_title:
+        subfolder_name = clean_folder_name(post_title)
+        final_download_path = os.path.join(download_path, subfolder_name)
+        logger_func(f"   [MediaFire] Using post subfolder: '{subfolder_name}'")
+    os.makedirs(final_download_path, exist_ok=True)
+    
+    if overall_progress_callback: overall_progress_callback(1, 0)
+
+    original_stdout = sys.stdout
+    original_stderr = sys.stderr
+    captured_output_buffer = io.StringIO()
+    
+    paths = None
+    
+    if progress_callback_func:
+        progress_callback_func(_mediafire_filename(url) or "file", "In Progress...")
+    
+    try:
+        logger_func(f"   [MediaFire] Starting download for: {url}")
+        
+        sys.stdout = captured_output_buffer
+        sys.stderr = captured_output_buffer
+
+        output_path = final_download_path if not final_download_path.endswith(os.sep) else final_download_path.rstrip(os.sep)
+        
+        paths = MediafireDL.Download(url, output=output_path, filename=_mediafire_filename(url))
+        
+    except Exception as e:
+        paths = e
+    finally:
+        sys.stdout = original_stdout
+        sys.stderr = original_stderr
+
+    if isinstance(paths, str) and os.path.exists(paths):
+        logger_func(f"   [MediaFire] ✅ Finished. Downloaded '{os.path.basename(paths)}' to '{os.path.dirname(paths)}'")
+    else:
+        logger_func(f"   [MediaFire] ❌ Download failed: {paths}")
+        logger_func("   [MediaFire] ℹ️ The link may be private or deleted.")
+    
+    if overall_progress_callback: overall_progress_callback(1, 1)

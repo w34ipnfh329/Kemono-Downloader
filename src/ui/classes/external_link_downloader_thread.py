@@ -4,6 +4,7 @@ from ...services.drive_downloader import (
     download_dropbox_file,
     download_gdrive_file,
     download_mega_file as drive_download_mega_file,
+    download_mediafire_file
 )
 
 
@@ -66,6 +67,16 @@ class ExternalLinkDownloadThread(QThread):
                         self.download_base_path,
                         logger_func=self.parent_logger_func,
                         progress_callback_func=self.file_progress_signal.emit,
+                        use_post_subfolder=True,
+                        post_title=post_title
+                    )
+                elif platform == 'mediafire':
+                    download_mediafire_file(
+                        full_url,
+                        self.download_base_path,
+                        logger_func=self.parent_logger_func,
+                        progress_callback_func=self.file_progress_signal.emit,
+                        overall_progress_callback=self.overall_progress_signal.emit,
                         use_post_subfolder=True,
                         post_title=post_title
                     )

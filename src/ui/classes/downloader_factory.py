@@ -49,6 +49,7 @@ def create_downloader_thread(main_app, api_url, service, id1, id2, effective_out
     elif 'drive.google.com' in api_url: platform = 'gdrive'
     elif 'dropbox.com' in api_url: platform = 'dropbox'
     elif 'gofile.io' in api_url: platform = 'gofile'
+    elif 'mediafire.com' in api_url: platform = 'mediafire'
     if platform:
         use_post_subfolder = main_app.use_subfolder_per_post_checkbox.isChecked()
         return DriveDownloadThread(
@@ -214,4 +215,4 @@ def create_downloader_thread(main_app, api_url, service, id1, id2, effective_out
         )
         
     main_app.log_signal.emit(f"ℹ️ No specialized downloader found for service '{service}' and URL '{api_url[:50]}...'. Using generic downloader.")
-    return None
+    return None

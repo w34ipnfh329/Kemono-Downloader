@@ -61,7 +61,7 @@ except ImportError:
 from .api_client import download_from_api, fetch_post_comments, fetch_single_post_data, fetch_post_revisions
 from ..services.multipart_downloader import download_file_in_parts, MULTIPART_DOWNLOADER_AVAILABLE
 from ..services.drive_downloader import (
-    download_mega_file, download_gdrive_file, download_dropbox_file
+    download_mega_file, download_gdrive_file, download_dropbox_file, download_mediafire_file
 )
 from ..utils.file_utils import (
     is_image, is_video, is_zip, is_rar, is_archive, is_audio, KNOWN_NAMES,
@@ -135,7 +135,7 @@ class PostProcessorWorker:
                  creator_download_folder_ignore_words=None,
                  manga_global_file_counter_ref=None,
                  use_date_prefix_for_subfolder=False,
-                 date_prefix_format="YYYY-MM-DD", 
+                 date_prefix_format="[YYYY-MM-DD]", 
                  keep_in_post_duplicates=False,
                  keep_duplicates_mode=DUPLICATE_HANDLING_HASH,
                  keep_duplicates_limit=0,
@@ -2905,7 +2905,7 @@ class DownloadThread(QThread):
                  scan_content_for_images=False,
                  creator_download_folder_ignore_words=None,
                  use_date_prefix_for_subfolder=True,
-                 date_prefix_format="YYYY-MM-DD", 
+                 date_prefix_format="[YYYY-MM-DD]", 
                  keep_in_post_duplicates=False,
                  keep_duplicates_mode='hash',
                  keep_duplicates_limit=0,

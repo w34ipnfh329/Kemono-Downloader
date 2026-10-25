@@ -334,7 +334,7 @@ class DownloaderApp (QWidget ):
         self.last_effective_download_dir = None
         self.save_creator_json_enabled_this_session = True 
         self.create_postid_files = self.settings.value(CREATE_POSTID_KEY, True, type=bool)
-        self.date_prefix_format = self.settings.value(DATE_PREFIX_FORMAT_KEY, "YYYY-MM-DD {post}", type=str)
+        self.date_prefix_format = self.settings.value(DATE_PREFIX_FORMAT_KEY, "[YYYY-MM-DD] {post}", type=str)
         self.is_single_post_session = False 
         self.discord_download_scope = 'files' 
         self.is_fetching_only = False
@@ -2633,7 +2633,7 @@ class DownloaderApp (QWidget ):
                 self .download_extracted_links_button .setEnabled (False )
                 return 
 
-            supported_platforms_for_button ={'mega','google drive','dropbox'}
+            supported_platforms_for_button ={'mega','google drive','dropbox', 'mediafire'}
             has_supported_links =any (
                 link_info [3 ].lower ()in supported_platforms_for_button for link_info in self .extracted_links_cache
                 for link_info in self.extracted_links_cache 
@@ -2647,7 +2647,7 @@ class DownloaderApp (QWidget ):
             self .log_signal .emit ("ℹ️ Download extracted links button clicked, but not in 'Only Links' mode.")
             return 
 
-        supported_platforms ={'mega','google drive','dropbox'}
+        supported_platforms ={'mega','google drive','dropbox', 'mediafire'}
         links_to_show_in_dialog =[]
         for link_data_tuple in self .extracted_links_cache :
             platform =link_data_tuple [3 ].lower ()
@@ -3348,16 +3348,9 @@ class DownloaderApp (QWidget ):
         is_only_links = (button == self.radio_only_links)
 
         if hasattr(self, 'use_multithreading_checkbox') and hasattr(self, 'thread_count_input'):
-            if is_only_links:
-                self.use_multithreading_checkbox.setChecked(True)
-                self.thread_count_input.setText("20")
-                self.thread_count_input.setEnabled(False) 
-                self.thread_count_label.setEnabled(False)
-                self.update_multithreading_label("20")
-            else:
-                is_multithreading_checked = self.use_multithreading_checkbox.isChecked()
-                self.thread_count_input.setEnabled(is_multithreading_checked)
-                self.thread_count_label.setEnabled(is_multithreading_checked)
+            is_multithreading_checked = self.use_multithreading_checkbox.isChecked()
+            self.thread_count_input.setEnabled(is_multithreading_checked)
+            self.thread_count_label.setEnabled(is_multithreading_checked)
 
         is_in_checkbox_mode = getattr(self, 'combined_download_pdf_setting', False) or (hasattr(self, 'checkbox_more') and not self.checkbox_more.isHidden())
         if button != self.radio_more and checked and not is_in_checkbox_mode:
@@ -6230,7 +6223,7 @@ class DownloaderApp (QWidget ):
             'manga_date_prefix': '',
             'scan_content_for_images': False,
             'use_date_prefix_for_subfolder': False,
-            'date_prefix_format': "YYYY-MM-DD {post}",
+            'date_prefix_format': "[YYYY-MM-DD] {post}",
             'keep_in_post_duplicates': False,
             'keep_duplicates_mode': DUPLICATE_HANDLING_HASH,
             'keep_duplicates_limit': 0,

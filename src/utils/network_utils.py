@@ -238,6 +238,7 @@ def get_link_platform(url):
         if 'dropbox.com' in domain: return 'dropbox'
         if 'patreon.com' in domain: return 'patreon'
         if 'gofile.io' in domain: return 'gofile'
+        if 'mediafire.com' in domain or 'mediafire' in domain: return 'mediafire'
         if 'instagram.com' in domain: return 'instagram'
         if 'twitter.com' in domain or 'x.com' in domain: return 'twitter/x'
         if 'discord.gg' in domain or 'discord.com/invite' in domain: return 'discord invite'
