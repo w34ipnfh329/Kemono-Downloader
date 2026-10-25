@@ -98,7 +98,7 @@ class ExportLinksDialog(QDialog):
             ('{thread_title}', 'SimpCity Thread Title', 'simpcity'), 
             ('{post_id}', 'SimpCity Post ID', 'simpcity'), 
             ('{username}', 'Creator Username', 'simpcity'), 
-            ('{date}', 'Published Date', 'simpcity')
+            ('{date}', 'Published Date', 'both')
         ]
         
         filtered_placeholders = [p for p in all_placeholders if p[2] == 'both' or p[2] == self.context or self.context == 'both']
@@ -110,7 +110,7 @@ class ExportLinksDialog(QDialog):
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             
             def insert_text(checked=False, t=p_text):
-                formatted = f" {t}\n" if t == '{url}' else f"[{t}] "
+                formatted = f" {t}\n" if t == '{post_title} {url}' else f"[{t}] "
                 self.custom_format_input.insertPlainText(formatted)
                 
             btn.clicked.connect(insert_text)
@@ -123,7 +123,7 @@ class ExportLinksDialog(QDialog):
         self.custom_format_input = QTextEdit()
         self.custom_format_input.setAcceptRichText(False)
         self.custom_format_input.setPlaceholderText("Enter your format, e.g., Title: {post_title}\\nLink: {url}")
-        self.custom_format_input.setText("{url}")
+        self.custom_format_input.setText("{post_title} {url}")
         self.custom_format_input.setFixedHeight(80)
         
         custom_layout.addLayout(btn_layout)
@@ -179,7 +179,7 @@ class ExportLinksDialog(QDialog):
         self.export_button.clicked.connect(self._accept_and_export)
         self.cancel_button.clicked.connect(self.reject)
         
-        self.radio_simple.setChecked(True)
+        self.radio_custom.setChecked(True)
 
     def _load_default_config(self):
         if not self.default_config: return
@@ -189,7 +189,7 @@ class ExportLinksDialog(QDialog):
         elif fmt == 'csv': self.radio_csv.setChecked(True)
         elif fmt == 'md': self.radio_md.setChecked(True)
         
-        mode = self.default_config.get('txt_mode', 'simple')
+        mode = self.default_config.get('txt_mode', 'custom')
         if mode == 'simple': self.radio_simple.setChecked(True)
         elif mode == 'detailed': self.radio_detailed.setChecked(True)
         elif mode == 'custom': self.radio_custom.setChecked(True)
@@ -198,13 +198,13 @@ class ExportLinksDialog(QDialog):
         self.check_include_link_text.setChecked(self.default_config.get('include_link_text', False))
         self.check_include_platform.setChecked(self.default_config.get('include_platform', False))
         
-        default_template = '[{platform}] [{thread_title}] [{post_id}] [{username}] [{date}] [{key}]\n{url}\n' if self.context == 'simpcity' else '{url}\n'
+        default_template = '[{platform}] [{thread_title}] [{post_id}] [{username}] [{date}] [{key}]\n{url}\n' if self.context == 'simpcity' else '{post_title} {url}\n'
         self.custom_format_input.setText(self.default_config.get('custom_template', default_template))
         self.check_separate_files.setChecked(self.default_config.get('separate_files', False))
         self.path_input.setText(self.default_config.get('filepath', ''))
 
     def _reset_custom_template(self):
-        default_template = '[{platform}] [{thread_title}] [{post_id}] [{username}] [{date}] [{key}]\n{url}\n' if self.context == 'simpcity' else '{url}\n'
+        default_template = '[{platform}] [{thread_title}] [{post_id}] [{username}] [{date}] [{key}]\n{url}\n' if self.context == 'simpcity' else '{post_title} {url}\n'
         self.custom_format_input.setText(default_template)
 
     def _update_options_visibility(self):
@@ -252,7 +252,7 @@ class ExportLinksDialog(QDialog):
         elif self.radio_csv.isChecked(): fmt = 'csv'
         elif self.radio_md.isChecked(): fmt = 'md'
         
-        mode = 'simple'
+        mode = 'custom'
         if self.radio_detailed.isChecked(): mode = 'detailed'
         elif self.radio_custom.isChecked(): mode = 'custom'
         
@@ -367,7 +367,7 @@ class ExportLinksDialog(QDialog):
         return last_segment
 
     def _normalize_item(self, item):
-        if isinstance(item, tuple) and len(item) == 5:
+        if isinstance(item, tuple) and len(item) == 6:
             url = item[2]
             key = item[4] if item[4] else self.extract_key_from_url(url)
             return {
@@ -379,7 +379,7 @@ class ExportLinksDialog(QDialog):
                 "thread_title": "",
                 "post_id": "",
                 "username": "",
-                "date": ""
+                "date": item[5]
             }
         elif isinstance(item, dict):
             url = item.get("url", "")
