@@ -30,7 +30,6 @@ from ...services.drive_downloader import (
     download_mega_file as drive_download_mega_file
 )
 from ...utils.file_utils import clean_folder_name, clean_filename, format_custom_suffix, format_custom_date, get_app_base_path
-from ...core.workers import robust_clean_name
 from ...ui.dialogs.SinglePDF import create_individual_pdf, create_single_pdf_from_content
 from ...utils.proxy_utils import get_proxies_from_settings
 
@@ -209,7 +208,7 @@ class SimpCityDownloadThread(QThread):
         raw_published = post_metadata.get('published', 'Unknown Date')
         published = format_custom_date(raw_published, custom_date_format) if raw_published != 'Unknown Date' else 'Unknown Date'
         
-        creator = robust_clean_name(post_metadata.get('thread_title', 'Unknown Thread'))
+        creator = clean_folder_name(post_metadata.get('thread_title', 'Unknown Thread'))
         post_id = str(post_metadata.get('post_id', 'unknown_id'))
         
         file_index = post_metadata.get('file_index', 1)
@@ -217,7 +216,7 @@ class SimpCityDownloadThread(QThread):
         
         raw_content = str(post_metadata.get('content', ''))
         content_no_newlines = raw_content.replace('\n', ' ').replace('\r', '')
-        content = robust_clean_name(content_no_newlines).strip()[:50].strip()
+        content = clean_folder_name(content_no_newlines).strip()[:50].strip()
         
         new_name = custom_format.replace('{published}', published).replace('{creator_name}', creator).replace('{id}', post_id).replace('{content}', content)
         
@@ -231,7 +230,7 @@ class SimpCityDownloadThread(QThread):
             original_base, _ = os.path.splitext(original_filename)
             new_name = new_name.replace('{name}', original_base)
         
-        new_name = robust_clean_name(new_name).strip()
+        new_name = clean_folder_name(new_name).strip()
         
         if not has_suffix_placeholder and not has_name_placeholder and new_name:
             new_name = f"{new_name}_{suffix}"
