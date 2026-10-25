@@ -84,7 +84,7 @@ def robust_clean_name(name):
     if not name:
         return ""
     illegal_chars_pattern = r'[\x00-\x1f<>:"/\\|?*]' 
-    cleaned_name = re.sub(illegal_chars_pattern, '', name)
+    cleaned_name = re.sub(illegal_chars_pattern, ' ', name)
 
     cleaned_name = cleaned_name.strip(' .')
 
@@ -95,7 +95,7 @@ def robust_clean_name(name):
 class PostProcessorSignals (QObject ):
     progress_signal =Signal (str )
     file_download_status_signal =Signal (bool )
-    external_link_signal =Signal (str ,str ,str ,str ,str )
+    external_link_signal = Signal(str, str, str, str, str, str)
     file_progress_signal =Signal (str ,object )
     file_successfully_downloaded_signal =Signal (dict )
     missed_character_post_signal =Signal (str ,str )
@@ -371,7 +371,7 @@ class PostProcessorWorker:
                     self.logger(f"   ✅ [Combined] Saved PDF: '{os.path.basename(final_doc_path)}' in '{os.path.basename(target_dir)}'")
                     return final_doc_path
                 else:
-                    self.logger(f"   ❌ [Combined] PDF creation failed for '{post_title[:40]}'")
+                    self.logger(f"   ❌ [Combined] PDF creation failed for '{post_title[:300]}'")
                     return None
             elif file_ext == 'docx':
                 if Document:
@@ -583,7 +583,7 @@ class PostProcessorWorker:
                         self.logger(f"   -> Skip File (Keyword in Original Name '{skip_word}'): '{api_original_filename}'. Scope: {self.skip_words_scope}")
                         return 0, 1, api_original_filename, False, FILE_DOWNLOAD_STATUS_SKIPPED, None
 
-            cleaned_original_api_filename = robust_clean_name(api_original_filename)
+            cleaned_original_api_filename = clean_folder_name(api_original_filename)
             original_filename_cleaned_base, original_ext = os.path.splitext(cleaned_original_api_filename)
             if not original_ext.startswith('.'): original_ext = '.' + original_ext if original_ext else ''
 
@@ -604,7 +604,7 @@ class PostProcessorWorker:
                     was_original_name_kept_flag = True
                 elif self.manga_filename_style == STYLE_POST_TITLE:
                     if post_title and post_title.strip():
-                        cleaned_post_title_base = robust_clean_name(post_title.strip())
+                        cleaned_post_title_base = clean_folder_name(post_title.strip())
                         if num_files_in_this_post > 1:
                             if file_index_in_post == 0:
                                 filename_to_save_in_main_path = f"{cleaned_post_title_base}{original_ext}"
@@ -625,7 +625,7 @@ class PostProcessorWorker:
                             manga_date_file_counter_ref[0] += 1
                         base_numbered_name = f"{counter_val_for_filename:03d}"
                         if self.manga_date_prefix and self.manga_date_prefix.strip():
-                            cleaned_prefix = robust_clean_name(self.manga_date_prefix.strip())
+                            cleaned_prefix = clean_folder_name(self.manga_date_prefix.strip())
                             if cleaned_prefix:
                                 filename_to_save_in_main_path = f"{cleaned_prefix} {base_numbered_name}{original_ext}"
                             else:
@@ -642,7 +642,7 @@ class PostProcessorWorker:
                         with counter_lock:
                             counter_val_for_filename = manga_global_file_counter_ref[0]
                             manga_global_file_counter_ref[0] += 1
-                        cleaned_post_title_base_for_global = robust_clean_name(post_title.strip() if post_title and post_title.strip() else "post")
+                        cleaned_post_title_base_for_global = clean_folder_name(post_title.strip() if post_title and post_title.strip() else "post")
                         filename_to_save_in_main_path = f"{cleaned_post_title_base_for_global}_{counter_val_for_filename:03d}{original_ext}"
                     else:
                         self.logger(f"⚠️ Manga Title+GlobalNum Mode: Counter ref not provided or malformed for '{api_original_filename}'. Using original. Ref: {manga_global_file_counter_ref}")
@@ -673,7 +673,7 @@ class PostProcessorWorker:
                         edited_date = self.post.get('edited')
 
                         raw_content = str(self.post.get('content') or '')
-                        clean_content = robust_clean_name(strip_html_tags(raw_content)).strip()[:60] 
+                        clean_content = clean_folder_name(strip_html_tags(raw_content)).strip()[:60] 
 
                         # Pre-truncate dynamic text values so they don't push the suffix off the 260-char limit
                         title_val = str(self.post.get('title', ''))[:80].strip()
@@ -694,7 +694,7 @@ class PostProcessorWorker:
                         }
                         
                         custom_base_name = self.manga_custom_filename_format.format(**format_values)
-                        cleaned_custom_name = robust_clean_name(custom_base_name)
+                        cleaned_custom_name = clean_folder_name(custom_base_name)
                         
                         has_suffix_placeholder = '{suffix}' in self.manga_custom_filename_format
                         
@@ -726,7 +726,7 @@ class PostProcessorWorker:
                         self.logger(f"     ⚠️ Post ID {original_post_id_for_log} missing both 'published' and 'added' dates for STYLE_DATE_POST_TITLE. Using 'nodate'.")
 
                     if post_title and post_title.strip():
-                        temp_cleaned_title = robust_clean_name(post_title.strip())
+                        temp_cleaned_title = clean_folder_name(post_title.strip())
                         if not temp_cleaned_title or temp_cleaned_title.startswith("untitled_folder"):
                             self.logger(f"⚠️ Renaming Mode (Date+PostTitle Style): Post title for post {original_post_id_for_log} ('{post_title}') was empty or generic after cleaning. Using 'post' as title part.")
                             cleaned_post_title_for_filename = "post"
@@ -771,7 +771,7 @@ class PostProcessorWorker:
                     except Exception:
                         ext = ".file"
 
-                    cleaned_post_title = robust_clean_name(post_title.strip() if post_title else "post")[:40]
+                    cleaned_post_title = clean_folder_name(post_title.strip() if post_title else "post")[:40]
                     filename_to_save_in_main_path = f"{cleaned_post_title}_{name_hash}{ext}"
                     was_original_name_kept_flag = False
                 else:
@@ -1413,7 +1413,7 @@ class PostProcessorWorker:
     def _get_manga_style_filename_for_post(self, post_title, original_ext):
         """Generates a filename based on manga style, using post data."""
         if self.manga_filename_style == STYLE_POST_TITLE:
-            cleaned_post_title_base = robust_clean_name(post_title.strip() if post_title and post_title.strip() else "post")
+            cleaned_post_title_base = clean_folder_name(post_title.strip() if post_title and post_title.strip() else "post")
             return f"{cleaned_post_title_base}{original_ext}"
             
         elif self.manga_filename_style == STYLE_CUSTOM:
@@ -1435,20 +1435,20 @@ class PostProcessorWorker:
                     'creator_name': creator_name,
                     'service': self.service,
                     'title': str(self.post.get('title', '')),
-                    'name': robust_clean_name(post_title),
+                    'name': clean_folder_name(post_title),
                     'added': format_date(added_date or published_date),
                     'published': format_date(published_date),
                     'edited': format_date(edited_date or published_date)
                 }
                 
                 custom_base_name = self.manga_custom_filename_format.format(**format_values)
-                cleaned_custom_name = robust_clean_name(custom_base_name)
+                cleaned_custom_name = clean_folder_name(custom_base_name)
                 
                 return f"{cleaned_custom_name}{original_ext}"
                 
             except (KeyError, IndexError, ValueError) as e:
                 self.logger(f"⚠️ Custom format error for text export: {e}. Falling back to post title.")
-                return f"{robust_clean_name(post_title.strip() or 'untitled_post')}{original_ext}"
+                return f"{clean_folder_name(post_title.strip() or 'untitled_post')}{original_ext}"
         
         elif self.manga_filename_style == STYLE_DATE_POST_TITLE:
             published_date_str = self.post.get('published')
@@ -1465,7 +1465,7 @@ class PostProcessorWorker:
                 except Exception:
                     pass
 
-            cleaned_post_title_for_filename = robust_clean_name(post_title.strip() or "post")
+            cleaned_post_title_for_filename = clean_folder_name(post_title.strip() or "post")
             base_name_for_style = f"{formatted_date_str}_{cleaned_post_title_for_filename}"
             return f"{base_name_for_style}{original_ext}"
         
@@ -1482,10 +1482,10 @@ class PostProcessorWorker:
                 except Exception:
                     pass
             
-            cleaned_post_title_base = robust_clean_name(post_title.strip() or "untitled_post")
+            cleaned_post_title_base = clean_folder_name(post_title.strip() or "untitled_post")
             return f"{formatted_date_str}_{cleaned_post_title_base}{original_ext}"
 
-        return f"{robust_clean_name(post_title.strip() or 'untitled_post')}{original_ext}"
+        return f"{clean_folder_name(post_title.strip() or 'untitled_post')}{original_ext}"
 
     def process(self):
         result_tuple = (0, 0, [], [], [], None, None)
@@ -1522,7 +1522,7 @@ class PostProcessorWorker:
                 if preview_state == 'pending':
                     _is_pawchive_pending_post = True
                     self.logger(
-                        f"   ⏳ [Pawchive] Post {post_id} ('{post_title[:50]}') has "
+                        f"   ⏳ [Pawchive] Post {post_id} ('{post_title[:300]}') has "
                         f"preview_state='pending'. Files may not be imported yet. "
                         f"Will attempt download once per file without retrying."
                     )
@@ -1592,73 +1592,11 @@ class PostProcessorWorker:
             effective_unwanted_keywords_for_folder_naming = self.unwanted_keywords.copy()
             is_full_creator_download_no_char_filter = not self.target_post_id_from_initial_url and not current_character_filters
             
-            if (self.show_external_links or self.extract_links_only):
-                unique_links_data = {}
-                links_emitted_count = 0
-
-                embed_data = post_data.get('embed')
-                if isinstance(embed_data, dict) and embed_data.get('url'):
-                    embed_url = embed_data['url']
-                    embed_subject = embed_data.get('subject', embed_url)
-                    unique_links_data[embed_url] = embed_subject
-
-                if post_content_html:
-                    try:
-                        for match in link_pattern.finditer(post_content_html):
-                            link_url = html.unescape(match.group(1).strip())
-                            if not any(ext in link_url.lower() for ext in ['.css', '.js', '.ico', '.xml', '.svg']) and not link_url.startswith('javascript:'):
-                                clean_link_text = html.unescape(re.sub(r'<.*?>', '', match.group(2))).strip()
-                                unique_links_data[link_url] = clean_link_text if clean_link_text else "[Link]"
-
-                        plain_text_content = strip_html_tags(post_content_html)
-                        plain_text_url_pattern = re.compile(r"""\b(https?://[^\s"'<>\[\]\{\}\|\^\\^~\[\]`]+)""", re.IGNORECASE)
-                        for match in plain_text_url_pattern.finditer(plain_text_content):
-                            link_url = html.unescape(match.group(1).strip())
-                            if link_url not in unique_links_data:
-                                unique_links_data[link_url] = "[Plain Text Link]"
-
-                        scraped_platforms = {'kemono', 'coomer', 'patreon'}
-                        for link_url, link_text in unique_links_data.items():
-                            platform = get_link_platform(link_url)
-                            decryption_key_found = ""
-                            if platform == 'mega':
-                                mega_key_pattern = re.compile(r'\b([a-zA-Z0-9_-]{43}|[a-zA-Z0-9_-]{22})\b')
-                                parsed_mega_url = urlparse(link_url)
-                                if parsed_mega_url.fragment:
-                                    potential_key_from_fragment = parsed_mega_url.fragment.split('!')[-1]
-                                    if mega_key_pattern.fullmatch(potential_key_from_fragment):
-                                        decryption_key_found = potential_key_from_fragment
-                                if not decryption_key_found and link_text:
-                                    key_match_in_text = mega_key_pattern.search(link_text)
-                                    if key_match_in_text:
-                                        decryption_key_found = key_match_in_text.group(1)
-                                if not decryption_key_found and self.extract_links_only and post_content_html:
-                                    key_match_in_content = mega_key_pattern.search(strip_html_tags(post_content_html))
-                                    if key_match_in_content:
-                                        decryption_key_found = key_match_in_content.group(1)
-                            
-                            final_link_url_to_emit = link_url
-                            if platform == 'mega' and decryption_key_found:
-                                parsed_url = urlparse(link_url)
-                                if decryption_key_found not in (parsed_url.fragment or ''):
-                                    base_url = link_url.split('#')[0]
-                                    final_link_url_to_emit = f"{base_url}#{decryption_key_found}"
-                                    self.logger(f"   ℹ️ Combined Mega link and key: {final_link_url_to_emit}")
-
-                            if platform not in scraped_platforms:
-                                self._emit_signal('external_link', post_title, link_text, final_link_url_to_emit, platform, "")
-                                links_emitted_count += 1
-                        if links_emitted_count > 0: self.logger(f"   🔗 Found {links_emitted_count} potential external link(s) in post content.")
-                    except Exception as e:
-                        self.logger(f"⚠️ Error parsing post content for links: {e}\n{traceback.format_exc(limit=2)}")
-                elif self.extract_links_only and not unique_links_data:
-                     self.logger(f"   ℹ️ Post {post_id} contains no text content to scan for links.")
-            
             if is_full_creator_download_no_char_filter and self.creator_download_folder_ignore_words:
                 effective_unwanted_keywords_for_folder_naming.update(self.creator_download_folder_ignore_words)
 
             if not self.extract_links_only:
-                self.logger(f"\n--- Processing {log_prefix} {post_id} ('{post_title[:50]}...') (Thread: {threading.current_thread().name}) ---")
+                self.logger(f"\n--- Processing {log_prefix} {post_id} ('{post_title[:300]}...') (Thread: {threading.current_thread().name}) ---")
 
             if self.download_revisions and self.service not in ['discord']:
                 self.logger(f"   Checking revisions for post {post_id}...")
@@ -1838,13 +1776,13 @@ class PostProcessorWorker:
 
             if current_character_filters:
                 if self.char_filter_scope == CHAR_SCOPE_TITLE and not post_is_candidate_by_title_char_match:
-                    self.logger(f"   -> Skip Post (Scope: Title - No Char Match): Title '{post_title[:50]}' does not match character filters.")
+                    self.logger(f"   -> Skip Post (Scope: Title - No Char Match): Title '{post_title[:300]}' does not match character filters.")
                     self._emit_signal('missed_character_post', post_title, "No title match for character filter")
                     result_tuple = (0, num_potential_files_in_post, [], [], [], None, None)
                     self._emit_signal('worker_finished', result_tuple)
                     return result_tuple
                 if self.char_filter_scope == CHAR_SCOPE_COMMENTS and not post_is_candidate_by_file_char_match_in_comment_scope and not post_is_candidate_by_comment_char_match:
-                    self.logger(f"   -> Skip Post (Scope: Comments - No Char Match in Comments): Post ID '{post_id}', Title '{post_title[:50]}...'")
+                    self.logger(f"   -> Skip Post (Scope: Comments - No Char Match in Comments): Post ID '{post_id}', Title '{post_title[:300]}...'")
                     if self.emitter and hasattr(self.emitter, 'missed_character_post_signal'):
                         self._emit_signal('missed_character_post', post_title, "No character match in files or comments (Comments scope)")
                     result_tuple = (0, num_potential_files_in_post, [], [], [], None, None)
@@ -1858,13 +1796,13 @@ class PostProcessorWorker:
                 if self.skip_words_list and (self.skip_words_scope == SKIP_SCOPE_POSTS or self.skip_words_scope == SKIP_SCOPE_BOTH):
                     for skip_word in self.skip_words_list:
                         if skip_word.lower() in post_title_lower:
-                            self.logger(f"   -> Skip Post (Keyword in Title '{skip_word}'): '{post_title[:50]}...'.")
+                            self.logger(f"   -> Skip Post (Keyword in Title '{skip_word}'): '{post_title[:300]}...'.")
                             result_tuple = (0, num_potential_files_in_post, [], [], [], None, None)
                             self._emit_signal('worker_finished', result_tuple)
                             return result_tuple
 
                 if current_character_filters and not post_is_candidate_by_title_char_match and not post_is_candidate_by_comment_char_match and not post_is_candidate_by_file_char_match_in_comment_scope:
-                    self.logger(f"   -> Skip Post (No character match for text extraction): '{post_title[:50]}...'.")
+                    self.logger(f"   -> Skip Post (No character match for text extraction): '{post_title[:300]}...'.")
                     result_tuple = (0, num_potential_files_in_post, [], [], [], None, None)
                     self._emit_signal('worker_finished', result_tuple)
                     return result_tuple
@@ -2064,9 +2002,8 @@ class PostProcessorWorker:
                         self._emit_signal('worker_finished', result_tuple)
                         return result_tuple
 
-
             if not self.extract_links_only and self.manga_mode_active and current_character_filters and (self.char_filter_scope == CHAR_SCOPE_TITLE or self.char_filter_scope == CHAR_SCOPE_BOTH) and not post_is_candidate_by_title_char_match:
-                 self.logger(f"   -> Skip Post (Renaming Mode with Title/Both Scope - No Title Char Match): Title '{post_title[:50]}' doesn't match filters.")
+                 self.logger(f"   -> Skip Post (Renaming Mode with Title/Both Scope - No Title Char Match): Title '{post_title[:300]}' doesn't match filters.")
                  self._emit_signal('missed_character_post', post_title, "Renaming Mode: No title match for character filter (Title/Both scope)")
                  result_tuple = (0, num_potential_files_in_post, [], [], [], None, None)
                  self._emit_signal('worker_finished', result_tuple)
@@ -2085,6 +2022,7 @@ class PostProcessorWorker:
                 should_create_post_subfolder = True
             base_folder_names_for_post_content = []
             determined_post_save_path_for_history = self.override_output_dir if self.override_output_dir else self.download_root
+            
             if not self.extract_links_only and self.use_subfolders:
                 if self._check_pause(f"Subfolder determination for post {post_id}"):
                     result_tuple = (0, num_potential_files_in_post, [], [], [], None, None)
@@ -2182,7 +2120,7 @@ class PostProcessorWorker:
                 post_title_lower = post_title.lower()
                 for skip_word in self.skip_words_list:
                     if skip_word.lower() in post_title_lower:
-                        self.logger(f"   -> Skip Post (Keyword in Title '{skip_word}'): '{post_title[:50]}...'. Scope: {self.skip_words_scope}")
+                        self.logger(f"   -> Skip Post (Keyword in Title '{skip_word}'): '{post_title[:300]}...'. Scope: {self.skip_words_scope}")
                         history_data_for_skipped_post = {
                             'post_id': post_id, 'service': self.service, 'user_id': self.user_id, 'post_title': post_title,
                             'top_file_name': "N/A (Post Skipped)", 'num_files': num_potential_files_in_post,
@@ -2206,9 +2144,16 @@ class PostProcessorWorker:
                         return result_tuple
 
             created_post_subfolder_path = None
-            if not self.extract_links_only and not self.export_all_links_mode and should_create_post_subfolder:
-                cleaned_post_title_for_sub = robust_clean_name(post_title)
-                max_folder_len = 100 
+            final_post_subfolder_name = None
+            if should_create_post_subfolder:
+                modified_base_name = post_title
+                if self.remove_from_filename_words_list:
+                    for word_to_remove in self.remove_from_filename_words_list:
+                        if not word_to_remove: continue
+                        pattern = re.compile(re.escape(word_to_remove), re.IGNORECASE)
+                        modified_base_name = pattern.sub("", modified_base_name)
+                cleaned_post_title_for_sub = clean_folder_name(modified_base_name)
+                max_folder_len = 500 
                 if len(cleaned_post_title_for_sub) > max_folder_len:
                     cleaned_post_title_for_sub = cleaned_post_title_for_sub[:max_folder_len].strip()
                 post_id_for_fallback = self.post.get('id', 'unknown_id')
@@ -2243,11 +2188,9 @@ class PostProcessorWorker:
                     self.logger(f"   ℹ️ Applying custom subfolder format: '{original_cleaned_post_title_for_sub}'")
 
                 base_path_for_post_subfolder = determined_post_save_path_for_history
-                suffix_counter = 0
-                final_post_subfolder_name = ""
+  
                 suffix_counter = 0
                 folder_creation_successful = False
-                final_post_subfolder_name = ""
                 post_id_for_folder = str(self.post.get('id', 'unknown_id'))
 
                 while not folder_creation_successful:
@@ -2289,6 +2232,70 @@ class PostProcessorWorker:
                                 break
                 determined_post_save_path_for_history = os.path.join(base_path_for_post_subfolder, final_post_subfolder_name)
 
+            if (self.show_external_links or self.extract_links_only):
+                unique_links_data = {}
+                links_emitted_count = 0
+
+                embed_data = post_data.get('embed')
+                if isinstance(embed_data, dict) and embed_data.get('url'):
+                    embed_url = embed_data['url']
+                    embed_subject = embed_data.get('subject', embed_url)
+                    unique_links_data[embed_url] = embed_subject
+
+                if post_content_html:
+                    try:
+                        for match in link_pattern.finditer(post_content_html):
+                            link_url = html.unescape(match.group(1).strip())
+                            if not any(ext in link_url.lower() for ext in ['.css', '.js', '.ico', '.xml', '.svg']) and not link_url.startswith('javascript:'):
+                                clean_link_text = html.unescape(re.sub(r'<.*?>', '', match.group(2))).strip()
+                                unique_links_data[link_url] = clean_link_text if clean_link_text else "[Link]"
+
+                        plain_text_content = strip_html_tags(post_content_html)
+                        plain_text_url_pattern = re.compile(r"""\b(https?://[^\s"'<>\[\]\{\}\|\^\\^~\[\]`]+)""", re.IGNORECASE)
+                        for match in plain_text_url_pattern.finditer(plain_text_content):
+                            link_url = html.unescape(match.group(1).strip())
+                            if link_url not in unique_links_data:
+                                unique_links_data[link_url] = "[Plain Text Link]"
+
+                        scraped_platforms = {'kemono', 'coomer', 'patreon'}
+                        for link_url, link_text in unique_links_data.items():
+                            platform = get_link_platform(link_url)
+                            decryption_key_found = ""
+                            if platform == 'mega':
+                                mega_key_pattern = re.compile(r'\b([a-zA-Z0-9_-]{43}|[a-zA-Z0-9_-]{22})\b')
+                                parsed_mega_url = urlparse(link_url)
+                                if parsed_mega_url.fragment:
+                                    potential_key_from_fragment = parsed_mega_url.fragment.split('!')[-1]
+                                    if mega_key_pattern.fullmatch(potential_key_from_fragment):
+                                        decryption_key_found = potential_key_from_fragment
+                                if not decryption_key_found and link_text:
+                                    key_match_in_text = mega_key_pattern.search(link_text)
+                                    if key_match_in_text:
+                                        decryption_key_found = key_match_in_text.group(1)
+                                if not decryption_key_found and self.extract_links_only and post_content_html:
+                                    key_match_in_content = mega_key_pattern.search(strip_html_tags(post_content_html))
+                                    if key_match_in_content:
+                                        decryption_key_found = key_match_in_content.group(1)
+                            
+                            final_link_url_to_emit = link_url
+                            if platform == 'mega' and decryption_key_found:
+                                parsed_url = urlparse(link_url)
+                                if decryption_key_found not in (parsed_url.fragment or ''):
+                                    base_url = link_url.split('#')[0]
+                                    final_link_url_to_emit = f"{base_url}#{decryption_key_found}"
+                                    self.logger(f"   ℹ️ Combined Mega link and key: {final_link_url_to_emit}")
+
+                            if platform not in scraped_platforms:
+                                post_date = self.post.get('published') or self.post.get('added') or ""
+                                self._emit_signal(
+                                    'external_link', final_post_subfolder_name or post_title, link_text, final_link_url_to_emit, platform, "", post_date)
+                                links_emitted_count += 1
+                        if links_emitted_count > 0: self.logger(f"   🔗 Found {links_emitted_count} potential external link(s) in post content.")
+                    except Exception as e:
+                        self.logger(f"⚠️ Error parsing post content for links: {e}\n{traceback.format_exc(limit=2)}")
+                elif self.extract_links_only and not unique_links_data:
+                     self.logger(f"   ℹ️ Post {post_id} contains no text content to scan for links.")
+            
             if self.extract_links_only:
                 self.logger(f"   Extract Links Only mode: Finished processing post {post_id} for links.")
                 result_tuple = (0, 0, [], [], [], None, None)
@@ -2370,10 +2377,11 @@ class PostProcessorWorker:
                 for f_info in all_files_from_post_api:
                     url = f_info.get('url', '')
                     name = f_info.get('_original_name_for_log') or f_info.get('name', '')
+                    post_date = format_custom_date(self.post.get('published') or "", self.manga_custom_date_format)
                     if url:
-                        link_entries.append({'url': url, 'filename': name})
+                        link_entries.append({'url': url, 'filename': name, 'date': post_date})
                 if link_entries:
-                    self._emit_signal('collected_file_links', post_id, post_title, link_entries)
+                    self._emit_signal('collected_file_links', post_id, final_post_subfolder_name or post_title, link_entries)
                 result_tuple = (0, len(link_entries), [], [], [], None, None)
                 self._emit_signal('worker_finished', result_tuple)
                 return result_tuple
@@ -2855,7 +2863,7 @@ class DownloadThread(QThread):
     add_character_prompt_signal = Signal(str)
     file_download_status_signal = Signal(bool)
     finished_signal = Signal(int, int, bool, list)
-    external_link_signal = Signal(str, str, str, str, str)
+    external_link_signal = Signal(str, str, str, str, str, str)
     file_successfully_downloaded_signal = Signal(dict)
     file_progress_signal = Signal(str, object)
     retryable_file_failed_signal = Signal(list)
@@ -2868,7 +2876,7 @@ class DownloadThread(QThread):
                  cancellation_event,
                  pause_event, filter_character_list=None, dynamic_character_filter_holder=None,
                  filter_mode='all', skip_zip=True,
-                 use_subfolders=True, use_post_subfolders=False, custom_folder_name=None, compress_images=False,
+                 use_subfolders=True, use_post_subfolders=True, custom_folder_name=None, compress_images=False,
                  download_thumbnails=False, service=None, user_id=None,
                  downloaded_files=None, downloaded_file_hashes=None, downloaded_files_lock=None, downloaded_file_hashes_lock=None,
                  skip_words_list=None,
@@ -2882,7 +2890,7 @@ class DownloadThread(QThread):
                  manga_mode_active=False,
                  unwanted_keywords=None,
                  manga_filename_style='post_title',
-                 char_filter_scope='files',
+                 char_filter_scope='both',
                  remove_from_filename_words_list=None,
                  manga_date_prefix='',
                  allow_multipart_download=True,
@@ -2896,7 +2904,7 @@ class DownloadThread(QThread):
                  use_cookie=False,
                  scan_content_for_images=False,
                  creator_download_folder_ignore_words=None,
-                 use_date_prefix_for_subfolder=False,
+                 use_date_prefix_for_subfolder=True,
                  date_prefix_format="YYYY-MM-DD", 
                  keep_in_post_duplicates=False,
                  keep_duplicates_mode='hash',
