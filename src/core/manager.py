@@ -84,7 +84,7 @@ class DownloadManager:
         self.all_kept_original_filenames = []
         
         is_single_post = bool(config.get('target_post_id_from_initial_url'))
-        use_multithreading = config.get('use_multithreading', True)
+        use_multithreading = config.get('use_multithreading', False)
         
         sequential_styles = [STYLE_DATE_BASED, STYLE_POST_TITLE_GLOBAL_NUMBERING]
         
