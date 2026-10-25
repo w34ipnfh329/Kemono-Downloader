@@ -90,14 +90,14 @@ VIDEO_EXTENSIONS = {
     '.mpg', '.m4v', '.3gp', '.ogv', '.ts', '.vob'
 }
 ARCHIVE_EXTENSIONS = {
-    '.zip', '.rar', '.7z', '.tar', '.gz', '.bz2', '.bin'
+    '.zip', '.rar', '.7z', '.tar', '.gz', '.bz2', '.bin', 'z01'
 }
 AUDIO_EXTENSIONS = {
     '.mp3', '.wav', '.aac', '.flac', '.ogg', '.wma', '.m4a', '.opus',
     '.aiff', '.ape', '.mid', '.midi'
 }
 
-MAX_FILENAME_COMPONENT_LENGTH = 150
+MAX_FILENAME_COMPONENT_LENGTH = 1000
 
 FOLDER_NAME_STOP_WORDS = {
     "a", "alone", "am", "an", "and", "at", "be", "blues", "but", "by", "com",
