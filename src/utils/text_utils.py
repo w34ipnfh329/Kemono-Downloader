@@ -108,7 +108,8 @@ def match_folders_from_title(title, names_to_match, unwanted_keywords):
     cleaned_title = title
     for pat_str in KNOWN_TXT_MATCH_CLEANUP_PATTERNS:
         cleaned_title = re.sub(pat_str, ' ', cleaned_title, flags=re.IGNORECASE)
-    cleaned_title = re.sub(r'\s+', ' ', cleaned_title).strip()
+    
+    cleaned_title = re.sub(r'\s+', ' ', cleaned_title)
     
     title_lower = cleaned_title.lower()
 
