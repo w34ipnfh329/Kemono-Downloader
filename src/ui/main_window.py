@@ -138,7 +138,7 @@ class PostProcessorSignals(QObject):
     """A collection of signals for the DownloaderApp to communicate with itself across threads."""
     progress_signal = Signal(str)
     file_download_status_signal = Signal(bool)
-    external_link_signal = Signal(str, str, str, str, str)
+    external_link_signal = Signal(str, str, str, str, str, str)
     file_progress_signal = Signal(str, object)
     file_successfully_downloaded_signal = Signal(dict)
     missed_character_post_signal = Signal(str, str)
@@ -155,7 +155,7 @@ class DownloaderApp (QWidget ):
     file_successfully_downloaded_signal =Signal (dict )
     post_processed_for_history_signal =Signal (dict )
     finished_signal =Signal (int ,int ,bool ,list )
-    external_link_signal =Signal (str ,str ,str ,str ,str )
+    external_link_signal = Signal(str, str, str, str, str, str)
     file_progress_signal =Signal (str ,object )
     fetch_only_complete_signal = Signal(list)
     batch_update_check_complete_signal = Signal(list)
@@ -314,7 +314,7 @@ class DownloaderApp (QWidget ):
         self.allow_multipart_download_setting = False
         self.multipart_scope = 'both'
         self.multipart_parts_count = 4     
-        self.multipart_min_size_mb = 100 
+        self.multipart_min_size_mb = 50 
         self.use_cookie_setting = False
         self.scan_content_images_setting = self.settings.value(SCAN_CONTENT_IMAGES_KEY, False, type=bool)
         self.cookie_text_setting = ""
@@ -426,7 +426,7 @@ class DownloaderApp (QWidget ):
         self.download_location_label_widget = None
         self.remove_from_filename_label_widget = None
         self.skip_words_label_widget = None
-        self.setWindowTitle("Kemono Downloader v10.01")
+        self.setWindowTitle("Kemono Downloader v10.0")
         setup_ui(self)
         self._setup_system_tray()
         
@@ -554,14 +554,12 @@ class DownloaderApp (QWidget ):
         Generates a unique filename and safely writes a job settings dictionary 
         to the disk inside the 'appdata/jobs' folder.
         """
-        timestamp = int(time.time())
-        unique_id = uuid.uuid4().hex[:6]
-        
+
         safe_name = "".join(c for c in name_hint if c.isalnum() or c in (' ', '_', '-')).strip()
         if not safe_name: 
             safe_name = "job"
         
-        filename = f"job_{timestamp}_{safe_name}_{unique_id}.json"
+        filename = f"{safe_name}.json"
         filepath = os.path.join(self.jobs_dir, filename)
 
         try:
@@ -577,7 +575,7 @@ class DownloaderApp (QWidget ):
         Triggered by the 'Execute Queue' button. 
         Locks the UI, scans the jobs folder for pending JSON files, and kicks off the processing loop.
         """
-        job_files = sorted(glob.glob(os.path.join(self.jobs_dir, "job_*.json")))
+        job_files = sorted(glob.glob(os.path.join(self.jobs_dir, "*.json")))
         
         if not job_files:
             QMessageBox.information(self, "Queue Empty", "No job files found in appdata/jobs.")
@@ -608,7 +606,7 @@ class DownloaderApp (QWidget ):
             self._update_button_states_and_connections()
             return
 
-        job_files = sorted(glob.glob(os.path.join(self.jobs_dir, "job_*.json")))
+        job_files = sorted(glob.glob(os.path.join(self.jobs_dir, "*.json")))
         
         if not job_files:
             self.is_running_job_queue = False
@@ -1039,7 +1037,7 @@ class DownloaderApp (QWidget ):
         return default_text 
 
     def _load_saved_download_location (self ):
-        saved_location =self .settings .value (DOWNLOAD_LOCATION_KEY ,"",type =str )
+        saved_location ="G:\\"
         if saved_location and os .path .isdir (saved_location ):
             if hasattr (self ,'dir_input')and self .dir_input :
                 self .dir_input .setText (saved_location )
@@ -3093,16 +3091,14 @@ class DownloaderApp (QWidget ):
         print(f"  ==> Returning: {result}")
         return result
 
-    def handle_external_link_signal (self ,post_title ,link_text ,link_url ,platform ,decryption_key ):
+    def handle_external_link_signal (self, post_title, link_text, link_url, platform, decryption_key, date=""):
         """
         Catches external links (Mega, Google Drive, etc.) found inside post descriptions 
         by the background worker and adds them to the processing queue.
         """
-        link_data =(post_title ,link_text ,link_url ,platform ,decryption_key )
+        link_data = (post_title, link_text, link_url, platform, decryption_key)
+        cache_item = (*link_data, date)
         self .external_link_queue .append (link_data )
-        if self .radio_only_links and self .radio_only_links .isChecked ():
-            self .extracted_links_cache .append (link_data )
-            self ._update_download_extracted_links_button_state ()
 
         is_only_links_mode =self .radio_only_links and self .radio_only_links .isChecked ()
         should_display_in_external_log =self .show_external_links and not is_only_links_mode 
@@ -3113,8 +3109,8 @@ class DownloaderApp (QWidget ):
                 QTimer .singleShot (0 ,self ._try_process_next_external_link )
             return 
 
-        if link_data not in self .extracted_links_cache :
-            self .extracted_links_cache .append (link_data )
+        if cache_item not in self.extracted_links_cache:
+            self.extracted_links_cache.append(cache_item)
             
         if not self._is_processing_external_link_queue:
             QTimer.singleShot(0, self._try_process_next_external_link)
@@ -3483,7 +3479,7 @@ class DownloaderApp (QWidget ):
         self._current_link_post_title = None
 
         filtered_link_queue = deque()
-        for post_title ,link_text ,link_url ,platform ,decryption_key in self .extracted_links_cache :
+        for post_title, link_text, link_url, platform, decryption_key, _date in self.extracted_links_cache:
             
             matches_search =(not search_term or
             (post_title and search_term in post_title.lower()) or
@@ -6952,14 +6948,14 @@ class DownloaderApp (QWidget ):
         """Resets UI elements and some state to app defaults, then applies preserved inputs."""
         self .log_signal .emit ("🔄 Performing soft UI reset...")
         self .link_input .clear ()
-        self .dir_input .clear ()
         self .custom_folder_input .clear ();self .character_input .clear ();
         self .skip_words_input .clear ();self .start_page_input .clear ();self .end_page_input .clear ();self .new_char_input .clear ();
         if hasattr (self ,'remove_from_filename_input'):self .remove_from_filename_input .clear ()
-        self .character_search_input .clear ();self .thread_count_input .setText ("4");self .radio_all .setChecked (True );
-        self .skip_zip_checkbox .setChecked (True );self .download_thumbnails_checkbox .setChecked (False );
+        self .character_search_input .clear ();self .thread_count_input .setText ("4");self .radio_archives .setChecked (True );
+        self .skip_zip_checkbox .setChecked (False );self .download_thumbnails_checkbox .setChecked (False );
         self .compress_images_checkbox .setChecked (False );self .use_subfolders_checkbox .setChecked (False );
-        self.use_subfolder_per_post_checkbox .setChecked (True );self .use_multithreading_checkbox .setChecked (True );
+        self.use_subfolder_per_post_checkbox .setChecked (True );self .use_multithreading_checkbox .setChecked (False );
+        self.date_prefix_checkbox.setChecked(True)
         if self .favorite_mode_checkbox :self .favorite_mode_checkbox .setChecked (False )
         if hasattr (self ,'scan_content_images_checkbox'):self .scan_content_images_checkbox .setChecked (False )
         self .external_links_checkbox .setChecked (False )
@@ -6983,6 +6979,8 @@ class DownloaderApp (QWidget ):
             self .link_input .setText (preserve_url )
         if preserve_dir is not None :
             self .dir_input .setText (preserve_dir )
+        else:
+            self .dir_input .setText ('G:\\' )
         self .external_link_queue .clear ();self .extracted_links_cache =[]
         self ._is_processing_external_link_queue =False ;self ._current_link_post_title =None 
         if self .pause_event :self .pause_event .clear ()
@@ -8050,6 +8048,7 @@ class DownloaderApp (QWidget ):
                 'post_title': post_title,
                 'url': entry.get('url', ''),
                 'filename': entry.get('filename', ''),
+                'date': entry.get('date', ''),
             })
 
     def _finish_export_all_links(self):
@@ -8069,8 +8068,9 @@ class DownloaderApp (QWidget ):
                 filename = entry.get('filename', '')
                 post_title = entry.get('post_title', '')
                 post_id = entry.get('post_id', '')
+                date = entry.get('date', ''),
                 if url:
-                    lines.append(f"{url} [Post: '{post_title}' (ID: {post_id}), File: '{filename}']")
+                    lines.append(f"{url} [Date: '{date}' Post: '{post_title}' (ID: {post_id}), File: '{filename}']")
 
             if not lines:
                 # Specialized threads (rule34, etc.) handle their own export file (all_file_links.txt)
